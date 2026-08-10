@@ -69,6 +69,13 @@ window.addEventListener("DOMContentLoaded", initialize);
 
 function initialize(){
 
+    console.log("SCRIPT.JS CARGADO");
+
+    console.log(
+        "PairingEngine:",
+        window.PairingEngine
+    );
+
     players = getPlayers();
 
     createUrnBalls();
@@ -166,7 +173,7 @@ function startDraw(){
 
     try{
 
-        pairings = PairingEngine.generatePairings(
+        pairings = window.PairingEngine.generatePairings(
 
             players
 
