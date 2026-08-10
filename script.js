@@ -1,189 +1,372 @@
-/*=========================================================
-    script.js
-    PARTE 1
-=========================================================*/
-
 "use strict";
 
-/*=========================================================
-    ESTADO GLOBAL
-=========================================================*/
+/* =========================================================
+   ESTADO DEL SORTEO
+========================================================= */
 
 let players = [];
 let pairings = [];
 
 let currentPairIndex = 0;
-let revealingFirstPlayer = true;
-
 let currentPlayerA = null;
 let currentPlayerB = null;
 
+let revealingFirstPlayer = true;
 let drawStarted = false;
+let extractionInProgress = false;
 
-/*=========================================================
-    ELEMENTOS DEL DOM
-=========================================================*/
 
-const ballContainer = document.getElementById("ballContainer");
+/* =========================================================
+   ELEMENTOS HTML
+========================================================= */
 
-const drawBall = document.getElementById("drawBall");
+const ballContainer =
+    document.getElementById("ballContainer");
 
-const paperName = document.getElementById("paperName");
-const paperTeam = document.getElementById("paperTeam");
-const paperArmy = document.getElementById("paperArmy");
+const drawBall =
+    document.getElementById("drawBall");
 
-const historyList = document.getElementById("historyList");
+const paperName =
+    document.getElementById("paperName");
 
-const versusSection = document.getElementById("versusSection");
+const paperTeam =
+    document.getElementById("paperTeam");
 
-const playerLeft = document.getElementById("playerLeft");
-const playerRight = document.getElementById("playerRight");
+const paperArmy =
+    document.getElementById("paperArmy");
 
-const startButton = document.getElementById("startButton");
-const nextButton = document.getElementById("nextButton");
-const restartButton = document.getElementById("restartButton");
+const historyList =
+    document.getElementById("historyList");
 
-const finalScreen = document.getElementById("finalScreen");
-const finalList = document.getElementById("finalList");
+const versusSection =
+    document.getElementById("versusSection");
 
-/*=========================================================
-    SONIDOS
-=========================================================*/
+const playerLeft =
+    document.getElementById("playerLeft");
 
-const introAudio = document.getElementById("introAudio");
-const ballAudio = document.getElementById("ballAudio");
-const openAudio = document.getElementById("openAudio");
-const applauseAudio = document.getElementById("applauseAudio");
+const playerRight =
+    document.getElementById("playerRight");
 
-/*=========================================================
-    BOLAS DE LA URNA
-=========================================================*/
+const startButton =
+    document.getElementById("startButton");
+
+const nextButton =
+    document.getElementById("nextButton");
+
+const restartButton =
+    document.getElementById("restartButton");
+
+const finalScreen =
+    document.getElementById("finalScreen");
+
+const finalList =
+    document.getElementById("finalList");
+
+const urnArea =
+    document.getElementById("urnArea");
+
+
+/* =========================================================
+   AUDIO
+========================================================= */
+
+const introAudio =
+    document.getElementById("introAudio");
+
+const ballAudio =
+    document.getElementById("ballAudio");
+
+const openAudio =
+    document.getElementById("openAudio");
+
+const applauseAudio =
+    document.getElementById("applauseAudio");
+
+
+/* =========================================================
+   BOLAS DE LA URNA
+========================================================= */
 
 const urnBalls = [];
 
-/*=========================================================
-    INICIALIZACIÓN
-=========================================================*/
 
-window.addEventListener("DOMContentLoaded", initialize);
+/* =========================================================
+   INICIALIZACIÓN
+========================================================= */
+
+window.addEventListener(
+    "DOMContentLoaded",
+    initialize
+);
+
 
 function initialize(){
 
-    console.log("SCRIPT.JS CARGADO");
+    console.log(
+        "Sorteo inicializado"
+    );
 
     console.log(
         "PairingEngine:",
         window.PairingEngine
     );
 
+    /*
+       Cargamos los participantes desde data.js.
+    */
+
     players = getPlayers();
+
+    /*
+       Creamos las bolas.
+    */
 
     createUrnBalls();
 
+    /*
+       Eventos de botones.
+    */
+
     registerEvents();
+
+    /*
+       Estado inicial.
+    */
 
     nextButton.disabled = true;
 
-    finalScreen.classList.remove("show");
+    if(finalScreen){
 
-    versusSection.classList.remove("show");
+        finalScreen.classList.remove(
+            "show"
+        );
+
+    }
+
+    versusSection.classList.remove(
+        "show"
+    );
+
+    clearDrawBall();
 
 }
 
-/*=========================================================
-    EVENTOS
-=========================================================*/
+
+/* =========================================================
+   EVENTOS
+========================================================= */
 
 function registerEvents(){
 
     startButton.addEventListener(
-
         "click",
-
         startDraw
-
     );
 
     nextButton.addEventListener(
-
         "click",
-
         nextExtraction
-
     );
 
     restartButton.addEventListener(
-
         "click",
-
         restartDraw
-
     );
 
 }
 
-/*=========================================================
-    CREAR BOLAS
-=========================================================*/
+
+/* =========================================================
+   CREAR BOLAS
+========================================================= */
 
 function createUrnBalls(){
 
     ballContainer.innerHTML = "";
 
-    players.forEach((player,index)=>{
+    urnBalls.length = 0;
 
-        const ball = document.createElement("div");
+    players.forEach(
+        (player,index)=>{
 
-        ball.className = "ball";
+            const ball =
+                document.createElement("div");
 
-        ball.dataset.player = index;
+            ball.className = "ball";
 
-        ballContainer.appendChild(ball);
+            ball.dataset.player =
+                index;
 
-        urnBalls.push({
+            /*
+               Posición inicial aleatoria.
+            */
 
-            element: ball,
+            const angle =
+                Math.random() *
+                Math.PI * 2;
 
-            removed: false,
+            const radius =
+                35 +
+                Math.random() * 80;
 
-            angle: Math.random()*Math.PI*2,
+            const speed =
+                0.002 +
+                Math.random() * 0.004;
 
-            radius: 60 + Math.random()*110,
+            ballContainer.appendChild(
+                ball
+            );
 
-            speed: 0.003 + Math.random()*0.003,
+            urnBalls.push({
 
-            offset: Math.random()*Math.PI*2
+                element: ball,
 
-        });
+                player: player,
 
-    });
+                angle: angle,
+
+                radius: radius,
+
+                speed: speed,
+
+                offset:
+                    Math.random() *
+                    Math.PI * 2,
+
+                removed: false
+
+            });
+
+        }
+    );
+
+    /*
+       Comenzamos el movimiento.
+    */
+
+    requestAnimationFrame(
+        animateUrn
+    );
 
 }
 
-/*=========================================================
-    COMENZAR SORTEO
-=========================================================*/
+
+/* =========================================================
+   ANIMACIÓN DE LA URNA
+========================================================= */
+
+function animateUrn(time){
+
+    urnBalls.forEach(
+        ball=>{
+
+            if(ball.removed)
+                return;
+
+            const wobble =
+                Math.sin(
+                    time * 0.001 +
+                    ball.offset
+                ) * 8;
+
+            ball.angle +=
+                ball.speed * 16;
+
+            const x =
+                Math.cos(
+                    ball.angle
+                ) *
+                (ball.radius + wobble);
+
+            const y =
+                Math.sin(
+                    ball.angle
+                ) *
+                (
+                    ball.radius * .55
+                );
+
+            const rotation =
+                ball.angle * 30;
+
+            ball.element.style.transform =
+
+                `translate(
+                    ${x}px,
+                    ${y}px
+                )
+                rotate(${rotation}deg)`;
+
+        }
+    );
+
+    requestAnimationFrame(
+        animateUrn
+    );
+
+}
+
+
+/* =========================================================
+   COMENZAR SORTEO
+========================================================= */
 
 function startDraw(){
 
     if(drawStarted)
         return;
 
+    /*
+       Comprobación de seguridad.
+    */
+
+    if(
+        !window.PairingEngine ||
+        typeof window.PairingEngine.generatePairings
+        !== "function"
+    ){
+
+        alert(
+            "No se ha podido cargar el motor de emparejamientos."
+        );
+
+        console.error(
+            "PairingEngine no está disponible."
+        );
+
+        return;
+
+    }
+
     drawStarted = true;
+
+    /*
+       Generamos todos los enfrentamientos
+       antes de comenzar el espectáculo.
+    */
 
     try{
 
-        pairings = window.PairingEngine.generatePairings(
+        pairings =
+            window.PairingEngine
+                .generatePairings(
+                    players
+                );
 
-            players
-
+        console.log(
+            "Emparejamientos generados:",
+            pairings
         );
 
     }
 
     catch(error){
 
-        alert(error.message);
+        console.error(error);
+
+        alert(
+            error.message
+        );
 
         drawStarted = false;
 
@@ -191,27 +374,50 @@ function startDraw(){
 
     }
 
+    /*
+       Cambiamos botones.
+    */
+
     startButton.disabled = true;
 
     nextButton.disabled = false;
 
-    if(introAudio){
+    /*
+       Sonido inicial.
+    */
 
-        introAudio.currentTime = 0;
+    playAudio(
+        introAudio
+    );
 
-        introAudio.play().catch(()=>{});
+    /*
+       Animación inicial de la urna.
+    */
+
+    if(urnArea){
+
+        urnArea.classList.add(
+            "active"
+        );
 
     }
 
 }
 
-/*=========================================================
-    SIGUIENTE EXTRACCIÓN
-=========================================================*/
+
+/* =========================================================
+   SIGUIENTE EXTRACCIÓN
+========================================================= */
 
 function nextExtraction(){
 
-    if(currentPairIndex >= pairings.length){
+    if(extractionInProgress)
+        return;
+
+    if(
+        currentPairIndex >=
+        pairings.length
+    ){
 
         finishTournament();
 
@@ -219,109 +425,50 @@ function nextExtraction(){
 
     }
 
+    /*
+       Limpiamos completamente cualquier
+       información visual anterior.
+    */
+
+    clearPreviousReveal();
+
+    /*
+       Extraemos la siguiente bola.
+    */
+
     extractBall();
 
 }
 
-/*=========================================================
-    REINICIAR
-=========================================================*/
 
-function restartDraw(){
-
-    if(confirm("¿Deseas realizar un nuevo sorteo?")){
-
-        location.reload();
-
-    }
-
-}
-
-/*=========================================================
-    PLACEHOLDERS
-=========================================================*/
-
-/*
-Las siguientes funciones se implementarán
-en la Parte 2.
-*/
-
-function extractBall(){}
-
-function revealPlayer(){}
-
-function showVersus(){}
-
-function finishTournament(){}
-
-/*=========================================================
-    script.js
-    PARTE 2
-    Física y animación de la urna
-=========================================================*/
-
-/*=========================================
-    ANIMACIÓN CONTINUA
-=========================================*/
-
-let animationEnabled = true;
-
-requestAnimationFrame(updateUrn);
-
-function updateUrn(time){
-
-    if(animationEnabled){
-
-        urnBalls.forEach(ball=>{
-
-            if(ball.removed)
-                return;
-
-            ball.angle += ball.speed * 16;
-
-            const wobble =
-
-                Math.sin(
-                    time*0.001 +
-                    ball.offset
-                ) * 15;
-
-            const x =
-
-                Math.cos(ball.angle) *
-                (ball.radius + wobble);
-
-            const y =
-
-                Math.sin(ball.angle) *
-                (ball.radius * .55);
-
-            ball.element.style.transform =
-
-                `translate(${x}px,${y}px)`;
-
-        });
-
-    }
-
-    requestAnimationFrame(updateUrn);
-
-}
-
-/*=========================================
-    EXTRAER BOLA
-=========================================*/
+/* =========================================================
+   EXTRAER BOLA
+========================================================= */
 
 function extractBall(){
 
+    if(extractionInProgress)
+        return;
+
+    extractionInProgress = true;
+
     nextButton.disabled = true;
 
+    /*
+       Ocultamos temporalmente el VS anterior.
+    */
+
+    versusSection.classList.remove(
+        "show"
+    );
+
+    /*
+       Buscamos bolas disponibles.
+    */
+
     const available =
-
         urnBalls.filter(
-
-            b=>!b.removed
-
+            ball => !ball.removed
         );
 
     if(!available.length){
@@ -332,8 +479,11 @@ function extractBall(){
 
     }
 
-    const selected =
+    /*
+       Elegimos una bola aleatoria.
+    */
 
+    const selected =
         available[
             Math.floor(
                 Math.random() *
@@ -343,368 +493,889 @@ function extractBall(){
 
     selected.removed = true;
 
-    selected.element.classList.add(
+    /*
+       Sonido.
+    */
 
-        "hidden"
-
+    playAudio(
+        ballAudio
     );
 
-    if(ballAudio){
+    /*
+       Agitamos la urna.
+    */
 
-        ballAudio.currentTime = 0;
+    if(urnArea){
 
-        ballAudio.play().catch(()=>{});
+        urnArea.classList.remove(
+            "shake"
+        );
+
+        void urnArea.offsetWidth;
+
+        urnArea.classList.add(
+            "shake"
+        );
 
     }
+
+    /*
+       Animación de salida.
+    */
+
+    animateBallExtraction(
+        selected
+    );
+
+}
+
+
+/* =========================================================
+   ANIMACIÓN DE EXTRACCIÓN
+========================================================= */
+
+function animateBallExtraction(
+    selected
+){
+
+    const original =
+        selected.element;
+
+    /*
+       Posición de la bola.
+    */
+
+    const rect =
+        original.getBoundingClientRect();
+
+    /*
+       Creamos una copia para realizar
+       el recorrido.
+    */
+
+    const flyingBall =
+        document.createElement(
+            "div"
+        );
+
+    flyingBall.className =
+        "extractionBall";
+
+    /*
+       Posición inicial.
+    */
+
+    flyingBall.style.left =
+        rect.left + "px";
+
+    flyingBall.style.top =
+        rect.top + "px";
+
+    /*
+       La colocamos por encima de todo.
+    */
+
+    document.body.appendChild(
+        flyingBall
+    );
+
+    /*
+       Quitamos visualmente la original.
+    */
+
+    original.style.opacity =
+        "0";
+
+    /*
+       FASE 1:
+       La bola sale de la urna.
+    */
+
+    setTimeout(
+        ()=>{
+            flyingBall.classList.add(
+                "rise"
+            );
+        },
+        50
+    );
+
+    /*
+       FASE 2:
+       Viaja hacia el centro.
+    */
+
+    setTimeout(
+        ()=>{
+            flyingBall.classList.add(
+                "travel"
+            );
+        },
+        700
+    );
+
+    /*
+       FASE 3:
+       Llega al centro.
+    */
+
+    setTimeout(
+        ()=>{
+            flyingBall.classList.add(
+                "arrive"
+            );
+        },
+        1400
+    );
+
+    /*
+       FASE 4:
+       Desaparece y aparece la bola grande.
+    */
+
+    setTimeout(
+        ()=>{
+
+            flyingBall.remove();
+
+            showDrawBall();
+
+        },
+        2100
+    );
+
+}
+
+
+/* =========================================================
+   MOSTRAR BOLA CENTRAL
+========================================================= */
+
+function showDrawBall(){
+
+    /*
+       Limpiamos clases anteriores.
+    */
 
     drawBall.className = "";
 
     void drawBall.offsetWidth;
 
+    /*
+       Entrada de la bola.
+    */
+
     drawBall.classList.add(
-
-        "visible",
-        "extract"
-
+        "visible"
     );
 
-    setTimeout(()=>{
-
-        drawBall.classList.add(
-
-            "open"
-
-        );
-
-    },1800);
+    /*
+       Pequeño retraso antes de abrir.
+    */
 
     setTimeout(
+        ()=>{
 
-        revealPlayer,
+            drawBall.classList.add(
+                "open"
+            );
 
-        2500
+            playAudio(
+                openAudio
+            );
 
+        },
+        900
+    );
+
+    /*
+       Revelamos jugador.
+    */
+
+    setTimeout(
+        ()=>{
+            revealPlayer();
+        },
+        1500
     );
 
 }
 
-/*=========================================
-    REVELAR JUGADOR
-=========================================*/
+
+/* =========================================================
+   REVELAR JUGADOR
+========================================================= */
 
 function revealPlayer(){
 
     const pairing =
+        pairings[
+            currentPairIndex
+        ];
 
-        pairings[currentPairIndex];
-
-    let player;
-
-    if(revealingFirstPlayer){
-
-        player = pairing.a;
-
-        currentPlayerA = player;
-
-    }
-
-    else{
-
-        player = pairing.b;
-
-        currentPlayerB = player;
-
-    }
-
-    paperName.textContent =
-
-        player.nombre;
-
-    paperTeam.textContent =
-
-        player.equipo;
-
-    paperArmy.textContent =
-
-        player.ejercito;
-
-    if(openAudio){
-
-        openAudio.currentTime = 0;
-
-        openAudio.play().catch(()=>{});
-
-    }
+    /*
+       Primera bola del enfrentamiento.
+    */
 
     if(revealingFirstPlayer){
 
-        revealingFirstPlayer = false;
+        currentPlayerA =
+            pairing.a;
 
-        nextButton.disabled = false;
+        showPaper(
+            currentPlayerA
+        );
+
+        revealingFirstPlayer =
+            false;
 
     }
 
+    /*
+       Segunda bola.
+    */
+
     else{
 
-        revealingFirstPlayer = true;
+        currentPlayerB =
+            pairing.b;
+
+        showPaper(
+            currentPlayerB
+        );
+
+        revealingFirstPlayer =
+            true;
+
+        /*
+           Después de mostrar el segundo
+           jugador presentamos el VS.
+        */
 
         setTimeout(
-
             showVersus,
-
-            1500
-
+            1300
         );
 
     }
 
 }
 
-/*=========================================================
-    script.js
-    PARTE 3
-    VS, historial y fin del sorteo
-=========================================================*/
 
-/*=========================================
-    MOSTRAR ENFRENTAMIENTO
-=========================================*/
+/* =========================================================
+   MOSTRAR PAPEL
+========================================================= */
+
+function showPaper(player){
+
+    paperName.textContent =
+        player.nombre;
+
+    paperTeam.textContent =
+        player.equipo;
+
+    paperArmy.textContent =
+        player.ejercito;
+
+    /*
+       Animación del contenido.
+    */
+
+    const paper =
+        document.getElementById(
+            "paper"
+        );
+
+    if(paper){
+
+        paper.classList.remove(
+            "reveal"
+        );
+
+        void paper.offsetWidth;
+
+        paper.classList.add(
+            "reveal"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   MOSTRAR VS
+========================================================= */
 
 function showVersus(){
 
-    fillCard(playerLeft,currentPlayerA);
-    fillCard(playerRight,currentPlayerB);
+    /*
+       MUY IMPORTANTE:
+       limpiamos las tarjetas antes de rellenarlas.
+    */
 
-    playerLeft.classList.remove("show");
-    playerRight.classList.remove("show");
+    clearPlayerCards();
 
-    void playerLeft.offsetWidth;
+    /*
+       Rellenamos jugador izquierdo.
+    */
 
-    playerLeft.classList.add("show");
-    playerRight.classList.add("show");
+    fillPlayerCard(
+        playerLeft,
+        currentPlayerA
+    );
 
-    versusSection.classList.add("show");
+    /*
+       Rellenamos jugador derecho.
+    */
+
+    fillPlayerCard(
+        playerRight,
+        currentPlayerB
+    );
+
+    /*
+       Forzamos reinicio de animaciones.
+    */
+
+    playerLeft.classList.remove(
+        "show"
+    );
+
+    playerRight.classList.remove(
+        "show"
+    );
+
+    versusSection.classList.remove(
+        "show"
+    );
+
+    void versusSection.offsetWidth;
+
+    /*
+       Mostramos VS.
+    */
+
+    versusSection.classList.add(
+        "show"
+    );
+
+    playerLeft.classList.add(
+        "show"
+    );
+
+    playerRight.classList.add(
+        "show"
+    );
+
+    /*
+       Guardamos en historial.
+    */
 
     addHistoryCard(
-
         currentPlayerA,
-
         currentPlayerB
-
     );
+
+    /*
+       Pasamos al siguiente enfrentamiento.
+    */
 
     currentPairIndex++;
 
-    currentPlayerA=null;
-    currentPlayerB=null;
+    /*
+       La extracción ha terminado.
+    */
 
-    setTimeout(
+    extractionInProgress =
+        false;
 
-        prepareNextExtraction,
+    /*
+       El botón vuelve a estar disponible.
+    */
 
-        3000
+    nextButton.disabled =
+        false;
 
+}
+
+
+/* =========================================================
+   RELLENAR TARJETA
+========================================================= */
+
+function fillPlayerCard(
+    card,
+    player
+){
+
+    if(!card || !player)
+        return;
+
+    const name =
+        card.querySelector(
+            ".playerName"
+        );
+
+    const team =
+        card.querySelector(
+            ".playerTeam"
+        );
+
+    const army =
+        card.querySelector(
+            ".playerArmy"
+        );
+
+    if(name)
+        name.textContent =
+            player.nombre;
+
+    if(team)
+        team.textContent =
+            player.equipo;
+
+    if(army)
+        army.textContent =
+            player.ejercito;
+
+}
+
+
+/* =========================================================
+   LIMPIAR TARJETAS
+========================================================= */
+
+function clearPlayerCards(){
+
+    /*
+       Esta función evita exactamente el problema
+       que estabas viendo: los jugadores anteriores
+       permaneciendo en pantalla.
+    */
+
+    [playerLeft,playerRight].forEach(
+        card=>{
+
+            if(!card)
+                return;
+
+            const name =
+                card.querySelector(
+                    ".playerName"
+                );
+
+            const team =
+                card.querySelector(
+                    ".playerTeam"
+                );
+
+            const army =
+                card.querySelector(
+                    ".playerArmy"
+                );
+
+            if(name)
+                name.textContent = "";
+
+            if(team)
+                team.textContent = "";
+
+            if(army)
+                army.textContent = "";
+
+            card.classList.remove(
+                "show"
+            );
+
+        }
     );
 
 }
 
-/*=========================================
-    RELLENAR TARJETA
-=========================================*/
 
-function fillCard(card,player){
+/* =========================================================
+   LIMPIAR REVELACIÓN ANTERIOR
+========================================================= */
 
-    card.querySelector(".playerName").textContent =
-        player.nombre;
+function clearPreviousReveal(){
 
-    card.querySelector(".playerTeam").textContent =
-        player.equipo;
+    /*
+       Ocultamos VS.
+    */
 
-    card.querySelector(".playerArmy").textContent =
-        player.ejercito;
+    versusSection.classList.remove(
+        "show"
+    );
+
+    /*
+       Limpiamos las tarjetas.
+    */
+
+    clearPlayerCards();
+
+    /*
+       Limpiamos la bola.
+    */
+
+    clearDrawBall();
+
+    /*
+       Limpiamos los jugadores actuales.
+    */
+
+    currentPlayerA = null;
+
+    currentPlayerB = null;
 
 }
 
-/*=========================================
-    HISTORIAL
-=========================================*/
 
-function addHistoryCard(a,b){
+/* =========================================================
+   LIMPIAR BOLA
+========================================================= */
 
-    const card=document.createElement("div");
+function clearDrawBall(){
 
-    card.className="historyCard";
+    if(!drawBall)
+        return;
 
-    card.innerHTML=`
+    drawBall.className = "";
 
-        <strong>${a.nombre}</strong><br>
+    paperName.textContent =
+        "";
 
-        <small>${a.equipo}</small><br>
+    paperTeam.textContent =
+        "";
 
-        <small>${a.ejercito}</small>
+    paperArmy.textContent =
+        "";
 
-        <div class="vs">VS</div>
+}
 
-        <strong>${b.nombre}</strong><br>
 
-        <small>${b.equipo}</small><br>
+/* =========================================================
+   HISTORIAL
+========================================================= */
 
-        <small>${b.ejercito}</small>
+function addHistoryCard(
+    playerA,
+    playerB
+){
+
+    const card =
+        document.createElement(
+            "div"
+        );
+
+    card.className =
+        "historyCard";
+
+
+    card.innerHTML = `
+
+        <div class="historyPlayer">
+
+            <strong>
+                ${escapeHTML(
+                    playerA.nombre
+                )}
+            </strong>
+
+            <small>
+                ${escapeHTML(
+                    playerA.ejercito
+                )}
+            </small>
+
+        </div>
+
+        <div class="historyVS">
+            VS
+        </div>
+
+        <div class="historyPlayer">
+
+            <strong>
+                ${escapeHTML(
+                    playerB.nombre
+                )}
+            </strong>
+
+            <small>
+                ${escapeHTML(
+                    playerB.ejercito
+                )}
+            </small>
+
+        </div>
 
     `;
 
-    historyList.appendChild(card);
 
-    requestAnimationFrame(()=>{
+    historyList.appendChild(
+        card
+    );
 
-        card.classList.add("show");
 
-    });
+    /*
+       Animación de entrada.
+    */
 
-    historyList.scrollTop=
+    requestAnimationFrame(
+        ()=>{
+            card.classList.add(
+                "show"
+            );
+        }
+    );
 
+
+    /*
+       Scroll automático.
+    */
+
+    historyList.scrollTop =
         historyList.scrollHeight;
 
 }
 
-/*=========================================
-    PREPARAR SIGUIENTE BOLA
-=========================================*/
 
-function prepareNextExtraction(){
-
-    drawBall.className="";
-
-    paperName.textContent="";
-    paperTeam.textContent="";
-    paperArmy.textContent="";
-
-    if(currentPairIndex>=pairings.length){
-
-        finishTournament();
-
-        return;
-
-    }
-
-    nextButton.disabled=false;
-
-}
-
-/*=========================================
-    PANTALLA FINAL
-=========================================*/
+/* =========================================================
+   PANTALLA FINAL
+========================================================= */
 
 function finishTournament(){
 
-    nextButton.disabled=true;
+    extractionInProgress =
+        false;
 
-    animationEnabled=false;
+    nextButton.disabled =
+        true;
 
-    finalList.innerHTML="";
+    /*
+       Limpiamos la zona central.
+    */
 
-    pairings.forEach((pair,index)=>{
+    clearDrawBall();
 
-        const row=document.createElement("div");
+    versusSection.classList.remove(
+        "show"
+    );
 
-        row.className="historyCard";
+    /*
+       Generamos lista final.
+    */
 
-        row.innerHTML=`
+    finalList.innerHTML = "";
 
-            <strong>
+    pairings.forEach(
+        (pair,index)=>{
 
-                ${index+1}. ${pair.a.nombre}
+            const row =
+                document.createElement(
+                    "div"
+                );
 
-            </strong>
+            row.className =
+                "finalPair";
 
-            <div class="vs">
+            row.innerHTML = `
 
-                VS
+                <span class="number">
+                    ${index + 1}
+                </span>
 
-            </div>
+                <strong>
+                    ${escapeHTML(
+                        pair.a.nombre
+                    )}
+                </strong>
 
-            <strong>
+                <span class="finalVS">
+                    VS
+                </span>
 
-                ${pair.b.nombre}
+                <strong>
+                    ${escapeHTML(
+                        pair.b.nombre
+                    )}
+                </strong>
 
-            </strong>
+            `;
 
-        `;
+            finalList.appendChild(
+                row
+            );
 
-        finalList.appendChild(row);
+            setTimeout(
+                ()=>{
+                    row.classList.add(
+                        "show"
+                    );
+                },
+                index * 120
+            );
 
-    });
+        }
+    );
 
-    finalScreen.classList.add("show");
+
+    /*
+       Mostramos pantalla final.
+    */
+
+    finalScreen.classList.add(
+        "show"
+    );
+
+
+    /*
+       Confeti.
+    */
 
     createConfetti();
 
-    if(applauseAudio){
 
-        applauseAudio.currentTime=0;
+    /*
+       Aplausos.
+    */
 
-        applauseAudio.play().catch(()=>{});
-
-    }
+    playAudio(
+        applauseAudio
+    );
 
 }
 
-/*=========================================
-    CONFETI
-=========================================*/
+
+/* =========================================================
+   CONFETI
+========================================================= */
 
 function createConfetti(){
 
-    const colors=[
+    const colors = [
 
         "#FFD54A",
-
         "#FFFFFF",
-
         "#4FC3F7",
-
         "#FF6B6B",
-
         "#7CFF7C"
 
     ];
 
-    for(let i=0;i<180;i++){
 
-        const piece=document.createElement("div");
+    for(
+        let i = 0;
+        i < 120;
+        i++
+    ){
 
-        piece.className="confetti";
+        const piece =
+            document.createElement(
+                "div"
+            );
 
-        piece.style.left=Math.random()*100+"vw";
+        piece.className =
+            "confetti";
 
-        piece.style.background=
 
+        piece.style.left =
+            Math.random() *
+            100 +
+            "vw";
+
+
+        piece.style.background =
             colors[
-
                 Math.floor(
-
-                    Math.random()*colors.length
-
+                    Math.random() *
+                    colors.length
                 )
-
             ];
 
-        piece.style.animationDelay=
 
-            (Math.random()*1.5)+"s";
+        piece.style.animationDelay =
+            Math.random() *
+            1.5 +
+            "s";
 
-        piece.style.transform=
 
-            `rotate(${Math.random()*360}deg)`;
+        piece.style.transform =
+            `rotate(
+                ${Math.random()*360}deg
+            )`;
 
-        document.body.appendChild(piece);
 
-        setTimeout(()=>{
+        document.body.appendChild(
+            piece
+        );
 
-            piece.remove();
 
-        },5000);
+        setTimeout(
+            ()=>{
+                piece.remove();
+            },
+            5000
+        );
 
     }
+
+}
+
+
+/* =========================================================
+   AUDIO
+========================================================= */
+
+function playAudio(audio){
+
+    if(!audio)
+        return;
+
+    audio.currentTime = 0;
+
+    audio.play().catch(
+        error=>{
+            console.log(
+                "Audio bloqueado:",
+                error
+            );
+        }
+    );
+
+}
+
+
+/* =========================================================
+   REINICIAR
+========================================================= */
+
+function restartDraw(){
+
+    location.reload();
+
+}
+
+
+/* =========================================================
+   SEGURIDAD HTML
+========================================================= */
+
+function escapeHTML(text){
+
+    if(text === undefined ||
+       text === null){
+
+        return "";
+
+    }
+
+    return String(text)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
 
 }
