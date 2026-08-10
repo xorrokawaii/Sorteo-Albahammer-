@@ -1,805 +1,311 @@
-```javascript
-/*=========================================================
-    pairing.js
-    MOTOR DEFINITIVO DE EMPAREJAMIENTOS
-=========================================================*/
-
 "use strict";
 
+/* =====================================================
+   MOTOR DE EMPAREJAMIENTOS
+   ===================================================== */
 
-/*=========================================================
-    PAIRING ENGINE
-=========================================================*/
+window.PairingEngine = {
 
-window.PairingEngine = (() => {
+    generatePairings: function(players) {
 
-
-    /*=====================================================
-        CONFIGURACIÓN DE PENALIZACIONES
-    =====================================================*/
-
-    // Mismo equipo:
-    // Se intenta evitar, pero NO es imposible.
-    const TEAM_PENALTY = 1000;
-
-    // Mismo ejército:
-    // Se intenta evitar antes que el mismo equipo.
-    const ARMY_PENALTY = 100;
-
-
-    /*=====================================================
-        GENERAR EMPAREJAMIENTOS
-    =====================================================*/
-
-    function generatePairings(players){
-
-        if(!Array.isArray(players)){
-
+        if (!players || players.length < 2) {
             throw new Error(
-                "La lista de participantes no es válida."
+                "No hay suficientes participantes."
             );
-
         }
 
-        if(players.length < 2){
-
-            throw new Error(
-                "Se necesitan al menos 2 participantes."
-            );
-
-        }
-
-        if(players.length % 2 !== 0){
-
+        if (players.length % 2 !== 0) {
             throw new Error(
                 "El número de participantes debe ser par."
             );
-
         }
 
-        const forbidden = getForbiddenMatches();
+        const forbidden = [
+            ["Xorro", "Javier Ibáñez"],
+            ["Pablo Vera", "Rafa Vera"]
+        ];
 
-        const result = solve(
-            players,
+        const result = findPairings(
+            [...players],
             forbidden
         );
 
-        if(!result){
-
+        if (!result) {
             throw new Error(
                 "No ha sido posible generar un sorteo válido."
             );
-
         }
 
-        /*
-            Eliminamos la propiedad interna "cost"
-            antes de devolver el resultado.
-        */
-
-        return result.map(pair => ({
-
-            a: pair.a,
-
-            b: pair.b
-
-        }));
-
+        return result;
     }
 
+};
 
-    /*=====================================================
-        SOLUCIONADOR
-    =====================================================*/
 
-    function solve(players, forbidden){
+/* =====================================================
+   BUSCAR EMPAREJAMIENTOS
+   ===================================================== */
 
-        const remaining = [...players];
+function findPairings(players, forbidden) {
 
-        return backtracking(
+    if (players.length === 0) {
+        return [];
+    }
 
-            remaining,
+    /*
+       Elegimos al jugador con menos posibilidades.
+       Esto mejora muchísimo el rendimiento.
+    */
 
-            [],
+    let selectedIndex = 0;
+    let selectedOptions = null;
 
-            forbidden
+    for (let i = 0; i < players.length; i++) {
 
+        const options = [];
+
+        for (let j = 0; j < players.length; j++) {
+
+            if (i === j) continue;
+
+            if (
+                isForbidden(
+                    players[i],
+                    players[j],
+                    forbidden
+                )
+            ) {
+                continue;
+            }
+
+            options.push(j);
+        }
+
+        if (
+            selectedOptions === null ||
+            options.length < selectedOptions.length
+        ) {
+            selectedIndex = i;
+            selectedOptions = options;
+        }
+    }
+
+    if (!selectedOptions.length) {
+        return null;
+    }
+
+    const player = players[selectedIndex];
+
+    /*
+       Ordenamos los posibles rivales según prioridad.
+    */
+
+    const candidates = selectedOptions.map(index => {
+
+        const opponent = players[index];
+
+        return {
+            index: index,
+            player: opponent,
+            cost: pairingCost(
+                player,
+                opponent
+            )
+        };
+
+    });
+
+    /*
+       Primero las mejores opciones.
+    */
+
+    candidates.sort(
+        (a, b) => a.cost - b.cost
+    );
+
+    /*
+       Si tienen el mismo coste,
+       introducimos aleatoriedad.
+    */
+
+    shuffleEqualCosts(candidates);
+
+
+    /*
+       Probamos candidatos.
+    */
+
+    for (const candidate of candidates) {
+
+        const remaining = players.filter(
+            (_, index) =>
+                index !== selectedIndex &&
+                index !== candidate.index
         );
 
-    }
+        const rest = findPairings(
+            remaining,
+            forbidden
+        );
 
+        if (rest !== null) {
 
-    /*=====================================================
-        BACKTRACKING
-    =====================================================*/
-
-    function backtracking(
-
-        remaining,
-
-        current,
-
-        forbidden
-
-    ){
-
-        /*
-            Si no quedan jugadores,
-            hemos encontrado una solución completa.
-        */
-
-        if(remaining.length === 0){
-
-            return current;
-
-        }
-
-
-        /*
-            Elegimos primero al jugador que tenga
-            menos posibilidades de emparejamiento.
-
-            Esto reduce enormemente las ramas
-            innecesarias del algoritmo.
-        */
-
-        const playerIndex =
-
-            selectMostRestrictedPlayer(
-
-                remaining,
-
-                forbidden
-
-            );
-
-        const player =
-
-            remaining[playerIndex];
-
-
-        /*
-            Obtenemos los posibles rivales.
-        */
-
-        const candidates =
-
-            getCandidates(
-
-                remaining,
-
-                playerIndex,
-
-                forbidden
-
-            );
-
-
-        /*
-            Si no tiene ningún rival posible,
-            esta rama no funciona.
-        */
-
-        if(candidates.length === 0){
-
-            return null;
-
-        }
-
-
-        /*
-            Probamos los rivales en orden aleatorio
-            dentro de cada nivel de coste.
-
-            Esto hace que dos sorteos no produzcan
-            necesariamente el mismo resultado.
-        */
-
-        shuffleCandidates(candidates);
-
-
-        let bestSolution = null;
-
-        let bestCost = Infinity;
-
-
-        for(const candidate of candidates){
-
-            const opponent = candidate.player;
-
-            const cost = candidate.cost;
-
-
-            /*
-                Creamos la lista restante sin ambos jugadores.
-            */
-
-            const nextRemaining =
-
-                remaining.filter(
-
-                    (_, index) =>
-
-                        index !== playerIndex &&
-
-                        index !== candidate.index
-
-                );
-
-
-            /*
-                Añadimos la pareja provisional.
-            */
-
-            const nextCurrent = [
-
-                ...current,
-
+            return [
                 {
-
                     a: player,
-
-                    b: opponent,
-
-                    cost: cost
-
-                }
-
+                    b: candidate.player
+                },
+                ...rest
             ];
 
-
-            /*
-                Poda:
-
-                Si ya tenemos una solución mejor y esta rama
-                ya parte con un coste superior, no merece
-                la pena explorarla.
-
-                Como los costes nunca pueden disminuir,
-                esta rama no podrá superar la mejor solución.
-            */
-
-            const currentCost =
-
-                totalCost(nextCurrent);
-
-
-            if(currentCost >= bestCost){
-
-                continue;
-
-            }
-
-
-            /*
-                Continuamos recursivamente.
-            */
-
-            const solution =
-
-                backtracking(
-
-                    nextRemaining,
-
-                    nextCurrent,
-
-                    forbidden
-
-                );
-
-
-            if(!solution){
-
-                continue;
-
-            }
-
-
-            const solutionCost =
-
-                totalCost(solution);
-
-
-            if(solutionCost < bestCost){
-
-                bestCost = solutionCost;
-
-                bestSolution = solution;
-
-            }
-
-
-            /*
-                Coste 0 significa:
-
-                - ningún mismo equipo
-                - ningún mismo ejército
-
-                Por tanto es una solución perfecta.
-            */
-
-            if(bestCost === 0){
-
-                break;
-
-            }
-
         }
-
-
-        return bestSolution;
 
     }
 
-
-    /*=====================================================
-        SELECCIONAR JUGADOR MÁS RESTRINGIDO
-    =====================================================*/
-
-    function selectMostRestrictedPlayer(
-
-        players,
-
-        forbidden
-
-    ){
-
-        let bestIndex = 0;
-
-        let fewestCandidates = Infinity;
+    return null;
+}
 
 
-        for(let i = 0; i < players.length; i++){
+/* =====================================================
+   COSTE DEL EMPAREJAMIENTO
+   ===================================================== */
 
-            let count = 0;
+function pairingCost(a, b) {
 
+    let cost = 0;
 
-            for(let j = 0; j < players.length; j++){
+    /*
+       Mismo equipo:
+       penalización MUY alta.
+    */
 
-                if(i === j){
-
-                    continue;
-
-                }
-
-
-                if(
-
-                    !isForbidden(
-
-                        players[i],
-
-                        players[j],
-
-                        forbidden
-
-                    )
-
-                ){
-
-                    count++;
-
-                }
-
-            }
-
-
-            if(count < fewestCandidates){
-
-                fewestCandidates = count;
-
-                bestIndex = i;
-
-            }
-
-        }
-
-
-        return bestIndex;
-
+    if (sameTeam(a, b)) {
+        cost += 1000;
     }
 
+    /*
+       Mismo ejército:
+       penalización menor.
+    */
 
-    /*=====================================================
-        OBTENER RIVALES POSIBLES
-    =====================================================*/
+    if (sameArmy(a, b)) {
+        cost += 100;
+    }
 
-    function getCandidates(
-
-        players,
-
-        playerIndex,
-
-        forbidden
-
-    ){
-
-        const player = players[playerIndex];
-
-        const candidates = [];
+    return cost;
+}
 
 
-        for(let i = 0; i < players.length; i++){
+/* =====================================================
+   MISMO EQUIPO
+   ===================================================== */
 
-            if(i === playerIndex){
+function sameTeam(a, b) {
 
-                continue;
+    /*
+       Mercenario no cuenta como equipo.
+    */
 
-            }
+    if (!a.equipo || !b.equipo) {
+        return false;
+    }
 
+    if (
+        a.equipo.toLowerCase() === "mercenario" ||
+        b.equipo.toLowerCase() === "mercenario"
+    ) {
+        return false;
+    }
 
-            const opponent = players[i];
-
-
-            const cost =
-
-                pairingCost(
-
-                    player,
-
-                    opponent,
-
-                    forbidden
-
-                );
-
-
-            /*
-                Infinity significa enfrentamiento
-                absolutamente prohibido.
-            */
-
-            if(cost === Infinity){
-
-                continue;
-
-            }
+    return a.equipo === b.equipo;
+}
 
 
-            candidates.push({
+/* =====================================================
+   MISMO EJÉRCITO
+   ===================================================== */
 
-                index: i,
+function sameArmy(a, b) {
 
-                player: opponent,
+    if (!a.ejercito || !b.ejercito) {
+        return false;
+    }
 
-                cost: cost
-
-            });
-
-        }
+    return a.ejercito === b.ejercito;
+}
 
 
-        /*
-            Los emparejamientos más deseables
-            aparecen primero.
-        */
+/* =====================================================
+   ENFRENTAMIENTO PROHIBIDO
+   ===================================================== */
 
-        candidates.sort(
+function isForbidden(a, b, forbidden) {
 
-            (a,b) => a.cost - b.cost
+    return forbidden.some(pair => {
+
+        return (
+
+            (
+                pair[0] === a.nombre &&
+                pair[1] === b.nombre
+            )
+
+            ||
+
+            (
+                pair[0] === b.nombre &&
+                pair[1] === a.nombre
+            )
 
         );
 
+    });
 
-        return candidates;
-
-    }
+}
 
 
-    /*=====================================================
-        COSTE DE UN EMPAREJAMIENTO
-    =====================================================*/
+/* =====================================================
+   ALEATORIEDAD
+   ===================================================== */
 
-    function pairingCost(
+function shuffleEqualCosts(array) {
 
-        a,
+    let start = 0;
 
-        b,
+    while (start < array.length) {
 
-        forbidden
+        let end = start + 1;
 
-    ){
-
-        /*
-            Prohibiciones absolutas.
-        */
-
-        if(
-
-            isForbidden(
-
-                a,
-
-                b,
-
-                forbidden
-
-            )
-
-        ){
-
-            return Infinity;
-
+        while (
+            end < array.length &&
+            array[end].cost === array[start].cost
+        ) {
+            end++;
         }
 
+        for (
+            let i = end - 1;
+            i > start;
+            i--
+        ) {
 
-        let cost = 0;
+            const j =
+                start +
+                Math.floor(
+                    Math.random() *
+                    (i - start + 1)
+                );
 
-
-        /*
-            Mismo equipo.
-
-            Mercenario NO se considera un equipo,
-            por lo que nunca genera penalización.
-        */
-
-        if(sameTeam(a,b)){
-
-            cost += TEAM_PENALTY;
-
+            [
+                array[i],
+                array[j]
+            ] = [
+                array[j],
+                array[i]
+            ];
         }
 
-
-        /*
-            Mismo ejército.
-        */
-
-        if(sameArmy(a,b)){
-
-            cost += ARMY_PENALTY;
-
-        }
-
-
-        return cost;
-
+        start = end;
     }
 
-
-    /*=====================================================
-        COMPROBAR PROHIBICIONES
-    =====================================================*/
-
-    function isForbidden(
-
-        a,
-
-        b,
-
-        forbidden
-
-    ){
-
-        return forbidden.some(pair => {
-
-            const first = pair[0];
-
-            const second = pair[1];
-
-
-            return (
-
-                a.nombre === first &&
-
-                b.nombre === second
-
-            ) || (
-
-                a.nombre === second &&
-
-                b.nombre === first
-
-            );
-
-        });
-
-    }
-
-
-    /*=====================================================
-        MISMO EQUIPO
-    =====================================================*/
-
-    function sameTeam(a,b){
-
-        /*
-            "Mercenario" no cuenta como equipo.
-
-            Tampoco consideramos equipo vacío como
-            un equipo compartido.
-        */
-
-        if(
-
-            !a.equipo ||
-
-            !b.equipo
-
-        ){
-
-            return false;
-
-        }
-
-
-        if(
-
-            a.equipo.toLowerCase() === "mercenario" ||
-
-            b.equipo.toLowerCase() === "mercenario"
-
-        ){
-
-            return false;
-
-        }
-
-
-        return a.equipo === b.equipo;
-
-    }
-
-
-    /*=====================================================
-        MISMO EJÉRCITO
-    =====================================================*/
-
-    function sameArmy(a,b){
-
-        if(!a.ejercito || !b.ejercito){
-
-            return false;
-
-        }
-
-        return a.ejercito === b.ejercito;
-
-    }
-
-
-    /*=====================================================
-        COSTE TOTAL
-    =====================================================*/
-
-    function totalCost(pairings){
-
-        return pairings.reduce(
-
-            (total,pair) =>
-
-                total + pair.cost,
-
-            0
-
-        );
-
-    }
-
-
-    /*=====================================================
-        ALEATORIEDAD
-    =====================================================*/
-
-    function shuffleCandidates(candidates){
-
-        /*
-            Barajamos únicamente entre candidatos
-            que tienen el mismo coste.
-
-            Así mantenemos las prioridades pero
-            conseguimos resultados diferentes.
-        */
-
-        let start = 0;
-
-
-        while(start < candidates.length){
-
-            const cost = candidates[start].cost;
-
-            let end = start + 1;
-
-
-            while(
-
-                end < candidates.length &&
-
-                candidates[end].cost === cost
-
-            ){
-
-                end++;
-
-            }
-
-
-            /*
-                Fisher-Yates.
-            */
-
-            for(
-
-                let i = end - 1;
-
-                i > start;
-
-                i--
-
-            ){
-
-                const j =
-
-                    start +
-
-                    Math.floor(
-
-                        Math.random() *
-
-                        (i - start + 1)
-
-                    );
-
-
-                [
-
-                    candidates[i],
-
-                    candidates[j]
-
-                ] = [
-
-                    candidates[j],
-
-                    candidates[i]
-
-                ];
-
-            }
-
-
-            start = end;
-
-        }
-
-    }
-
-
-    /*=====================================================
-        TEXTO
-    =====================================================*/
-
-    function pairingsToText(pairings){
-
-        return pairings
-
-            .map(
-
-                (pair,index) =>
-
-                    `${index + 1}. ` +
-
-                    `${pair.a.nombre} vs ` +
-
-                    `${pair.b.nombre}`
-
-            )
-
-            .join("\n");
-
-    }
-
-
-    /*=====================================================
-        API PÚBLICA
-    =====================================================*/
-
-    return {
-
-        generatePairings,
-
-        pairingsToText
-
-    };
-
-})();
-
+}
