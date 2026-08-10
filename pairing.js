@@ -1,177 +1,786 @@
+```javascript
 /*=========================================================
     pairing.js
-    PARTE 1
+    MOTOR DEFINITIVO DE EMPAREJAMIENTOS
 =========================================================*/
 
 "use strict";
 
+
 /*=========================================================
-    MOTOR DE EMPAREJAMIENTOS
+    PAIRING ENGINE
 =========================================================*/
 
 const PairingEngine = (() => {
 
-    /*=========================================
-        CONSTANTES
-    =========================================*/
 
+    /*=====================================================
+        CONFIGURACIÓN DE PENALIZACIONES
+    =====================================================*/
+
+    // Mismo equipo:
+    // Se intenta evitar, pero NO es imposible.
     const TEAM_PENALTY = 1000;
 
+    // Mismo ejército:
+    // Se intenta evitar antes que el mismo equipo.
     const ARMY_PENALTY = 100;
 
-    /*=========================================
-        VARIABLES
-    =========================================*/
 
-    let forbidden = [];
-
-    /*=========================================
-        API PÚBLICA
-    =========================================*/
+    /*=====================================================
+        GENERAR EMPAREJAMIENTOS
+    =====================================================*/
 
     function generatePairings(players){
 
-        forbidden = getForbiddenMatches();
-
-        const result = solve(players);
-
-        if(!result){
+        if(!Array.isArray(players)){
 
             throw new Error(
-
-                "No ha sido posible generar un sorteo válido."
-
+                "La lista de participantes no es válida."
             );
 
         }
 
-        return result;
+        if(players.length < 2){
+
+            throw new Error(
+                "Se necesitan al menos 2 participantes."
+            );
+
+        }
+
+        if(players.length % 2 !== 0){
+
+            throw new Error(
+                "El número de participantes debe ser par."
+            );
+
+        }
+
+        const forbidden = getForbiddenMatches();
+
+        const result = solve(
+            players,
+            forbidden
+        );
+
+        if(!result){
+
+            throw new Error(
+                "No ha sido posible generar un sorteo válido."
+            );
+
+        }
+
+        /*
+            Eliminamos la propiedad interna "cost"
+            antes de devolver el resultado.
+        */
+
+        return result.map(pair => ({
+
+            a: pair.a,
+
+            b: pair.b
+
+        }));
 
     }
 
-    /*=========================================
-        RESTRICCIÓN ABSOLUTA
-    =========================================*/
 
-    function isForbidden(a,b){
+    /*=====================================================
+        SOLUCIONADOR
+    =====================================================*/
 
-        return forbidden.some(pair =>
+    function solve(players, forbidden){
 
-            (pair[0] === a.nombre && pair[1] === b.nombre) ||
+        const remaining = [...players];
 
-            (pair[0] === b.nombre && pair[1] === a.nombre)
+        return backtracking(
+
+            remaining,
+
+            [],
+
+            forbidden
 
         );
 
     }
 
-    /*=========================================
-        MISMO EQUIPO
-    =========================================*/
 
-    function sameTeam(a,b){
+    /*=====================================================
+        BACKTRACKING
+    =====================================================*/
 
-        if(a.equipo === "Mercenario")
-            return false;
+    function backtracking(
 
-        if(b.equipo === "Mercenario")
-            return false;
+        remaining,
 
-        return a.equipo === b.equipo;
+        current,
+
+        forbidden
+
+    ){
+
+        /*
+            Si no quedan jugadores,
+            hemos encontrado una solución completa.
+        */
+
+        if(remaining.length === 0){
+
+            return current;
+
+        }
+
+
+        /*
+            Elegimos primero al jugador que tenga
+            menos posibilidades de emparejamiento.
+
+            Esto reduce enormemente las ramas
+            innecesarias del algoritmo.
+        */
+
+        const playerIndex =
+
+            selectMostRestrictedPlayer(
+
+                remaining,
+
+                forbidden
+
+            );
+
+        const player =
+
+            remaining[playerIndex];
+
+
+        /*
+            Obtenemos los posibles rivales.
+        */
+
+        const candidates =
+
+            getCandidates(
+
+                remaining,
+
+                playerIndex,
+
+                forbidden
+
+            );
+
+
+        /*
+            Si no tiene ningún rival posible,
+            esta rama no funciona.
+        */
+
+        if(candidates.length === 0){
+
+            return null;
+
+        }
+
+
+        /*
+            Probamos los rivales en orden aleatorio
+            dentro de cada nivel de coste.
+
+            Esto hace que dos sorteos no produzcan
+            necesariamente el mismo resultado.
+        */
+
+        shuffleCandidates(candidates);
+
+
+        let bestSolution = null;
+
+        let bestCost = Infinity;
+
+
+        for(const candidate of candidates){
+
+            const opponent = candidate.player;
+
+            const cost = candidate.cost;
+
+
+            /*
+                Creamos la lista restante sin ambos jugadores.
+            */
+
+            const nextRemaining =
+
+                remaining.filter(
+
+                    (_, index) =>
+
+                        index !== playerIndex &&
+
+                        index !== candidate.index
+
+                );
+
+
+            /*
+                Añadimos la pareja provisional.
+            */
+
+            const nextCurrent = [
+
+                ...current,
+
+                {
+
+                    a: player,
+
+                    b: opponent,
+
+                    cost: cost
+
+                }
+
+            ];
+
+
+            /*
+                Poda:
+
+                Si ya tenemos una solución mejor y esta rama
+                ya parte con un coste superior, no merece
+                la pena explorarla.
+
+                Como los costes nunca pueden disminuir,
+                esta rama no podrá superar la mejor solución.
+            */
+
+            const currentCost =
+
+                totalCost(nextCurrent);
+
+
+            if(currentCost >= bestCost){
+
+                continue;
+
+            }
+
+
+            /*
+                Continuamos recursivamente.
+            */
+
+            const solution =
+
+                backtracking(
+
+                    nextRemaining,
+
+                    nextCurrent,
+
+                    forbidden
+
+                );
+
+
+            if(!solution){
+
+                continue;
+
+            }
+
+
+            const solutionCost =
+
+                totalCost(solution);
+
+
+            if(solutionCost < bestCost){
+
+                bestCost = solutionCost;
+
+                bestSolution = solution;
+
+            }
+
+
+            /*
+                Coste 0 significa:
+
+                - ningún mismo equipo
+                - ningún mismo ejército
+
+                Por tanto es una solución perfecta.
+            */
+
+            if(bestCost === 0){
+
+                break;
+
+            }
+
+        }
+
+
+        return bestSolution;
 
     }
 
-    /*=========================================
-        MISMO EJÉRCITO
-    =========================================*/
 
-    function sameArmy(a,b){
+    /*=====================================================
+        SELECCIONAR JUGADOR MÁS RESTRINGIDO
+    =====================================================*/
 
-        return a.ejercito === b.ejercito;
+    function selectMostRestrictedPlayer(
+
+        players,
+
+        forbidden
+
+    ){
+
+        let bestIndex = 0;
+
+        let fewestCandidates = Infinity;
+
+
+        for(let i = 0; i < players.length; i++){
+
+            let count = 0;
+
+
+            for(let j = 0; j < players.length; j++){
+
+                if(i === j){
+
+                    continue;
+
+                }
+
+
+                if(
+
+                    !isForbidden(
+
+                        players[i],
+
+                        players[j],
+
+                        forbidden
+
+                    )
+
+                ){
+
+                    count++;
+
+                }
+
+            }
+
+
+            if(count < fewestCandidates){
+
+                fewestCandidates = count;
+
+                bestIndex = i;
+
+            }
+
+        }
+
+
+        return bestIndex;
 
     }
 
-    /*=========================================
-        COSTE DEL EMPAREJAMIENTO
-    =========================================*/
 
-    function pairingCost(a,b){
+    /*=====================================================
+        OBTENER RIVALES POSIBLES
+    =====================================================*/
 
-        if(isForbidden(a,b))
+    function getCandidates(
+
+        players,
+
+        playerIndex,
+
+        forbidden
+
+    ){
+
+        const player = players[playerIndex];
+
+        const candidates = [];
+
+
+        for(let i = 0; i < players.length; i++){
+
+            if(i === playerIndex){
+
+                continue;
+
+            }
+
+
+            const opponent = players[i];
+
+
+            const cost =
+
+                pairingCost(
+
+                    player,
+
+                    opponent,
+
+                    forbidden
+
+                );
+
+
+            /*
+                Infinity significa enfrentamiento
+                absolutamente prohibido.
+            */
+
+            if(cost === Infinity){
+
+                continue;
+
+            }
+
+
+            candidates.push({
+
+                index: i,
+
+                player: opponent,
+
+                cost: cost
+
+            });
+
+        }
+
+
+        /*
+            Los emparejamientos más deseables
+            aparecen primero.
+        */
+
+        candidates.sort(
+
+            (a,b) => a.cost - b.cost
+
+        );
+
+
+        return candidates;
+
+    }
+
+
+    /*=====================================================
+        COSTE DE UN EMPAREJAMIENTO
+    =====================================================*/
+
+    function pairingCost(
+
+        a,
+
+        b,
+
+        forbidden
+
+    ){
+
+        /*
+            Prohibiciones absolutas.
+        */
+
+        if(
+
+            isForbidden(
+
+                a,
+
+                b,
+
+                forbidden
+
+            )
+
+        ){
+
             return Infinity;
+
+        }
+
 
         let cost = 0;
 
-        if(sameTeam(a,b))
+
+        /*
+            Mismo equipo.
+
+            Mercenario NO se considera un equipo,
+            por lo que nunca genera penalización.
+        */
+
+        if(sameTeam(a,b)){
+
             cost += TEAM_PENALTY;
 
-        if(sameArmy(a,b))
+        }
+
+
+        /*
+            Mismo ejército.
+        */
+
+        if(sameArmy(a,b)){
+
             cost += ARMY_PENALTY;
+
+        }
+
 
         return cost;
 
     }
 
-    /*=========================================
-        COPIA DE JUGADORES
-    =========================================*/
 
-    function clonePlayers(players){
+    /*=====================================================
+        COMPROBAR PROHIBICIONES
+    =====================================================*/
 
-        return players.map(player => ({...player}));
+    function isForbidden(
+
+        a,
+
+        b,
+
+        forbidden
+
+    ){
+
+        return forbidden.some(pair => {
+
+            const first = pair[0];
+
+            const second = pair[1];
+
+
+            return (
+
+                a.nombre === first &&
+
+                b.nombre === second
+
+            ) || (
+
+                a.nombre === second &&
+
+                b.nombre === first
+
+            );
+
+        });
 
     }
 
-    /*=========================================
-        ELIMINAR JUGADOR
-    =========================================*/
 
-    function removePlayer(list,index){
+    /*=====================================================
+        MISMO EQUIPO
+    =====================================================*/
 
-        const copy = [...list];
+    function sameTeam(a,b){
 
-        copy.splice(index,1);
+        /*
+            "Mercenario" no cuenta como equipo.
 
-        return copy;
+            Tampoco consideramos equipo vacío como
+            un equipo compartido.
+        */
+
+        if(
+
+            !a.equipo ||
+
+            !b.equipo
+
+        ){
+
+            return false;
+
+        }
+
+
+        if(
+
+            a.equipo.toLowerCase() === "mercenario" ||
+
+            b.equipo.toLowerCase() === "mercenario"
+
+        ){
+
+            return false;
+
+        }
+
+
+        return a.equipo === b.equipo;
 
     }
 
-    /*=========================================
-        BÚSQUEDA
-        (Implementada en la Parte 2)
-    =========================================*/
 
-    function solve(players){
+    /*=====================================================
+        MISMO EJÉRCITO
+    =====================================================*/
 
-        return backtracking(
+    function sameArmy(a,b){
 
-            clonePlayers(players),
+        if(!a.ejercito || !b.ejercito){
 
-            []
+            return false;
+
+        }
+
+        return a.ejercito === b.ejercito;
+
+    }
+
+
+    /*=====================================================
+        COSTE TOTAL
+    =====================================================*/
+
+    function totalCost(pairings){
+
+        return pairings.reduce(
+
+            (total,pair) =>
+
+                total + pair.cost,
+
+            0
 
         );
 
     }
 
-    function backtracking(remaining,current){
 
-        // Continúa en la Parte 2
+    /*=====================================================
+        ALEATORIEDAD
+    =====================================================*/
 
-        return null;
+    function shuffleCandidates(candidates){
+
+        /*
+            Barajamos únicamente entre candidatos
+            que tienen el mismo coste.
+
+            Así mantenemos las prioridades pero
+            conseguimos resultados diferentes.
+        */
+
+        let start = 0;
+
+
+        while(start < candidates.length){
+
+            const cost = candidates[start].cost;
+
+            let end = start + 1;
+
+
+            while(
+
+                end < candidates.length &&
+
+                candidates[end].cost === cost
+
+            ){
+
+                end++;
+
+            }
+
+
+            /*
+                Fisher-Yates.
+            */
+
+            for(
+
+                let i = end - 1;
+
+                i > start;
+
+                i--
+
+            ){
+
+                const j =
+
+                    start +
+
+                    Math.floor(
+
+                        Math.random() *
+
+                        (i - start + 1)
+
+                    );
+
+
+                [
+
+                    candidates[i],
+
+                    candidates[j]
+
+                ] = [
+
+                    candidates[j],
+
+                    candidates[i]
+
+                ];
+
+            }
+
+
+            start = end;
+
+        }
 
     }
 
-    /*=========================================
-        EXPORTAR TEXTO
-    =========================================*/
+
+    /*=====================================================
+        TEXTO
+    =====================================================*/
 
     function pairingsToText(pairings){
 
         return pairings
 
-            .map((pair,index)=>
+            .map(
 
-                `${index+1}. ${pair.a.nombre} vs ${pair.b.nombre}`
+                (pair,index) =>
+
+                    `${index + 1}. ` +
+
+                    `${pair.a.nombre} vs ` +
+
+                    `${pair.b.nombre}`
 
             )
 
@@ -179,9 +788,10 @@ const PairingEngine = (() => {
 
     }
 
-    /*=========================================
-        API
-    =========================================*/
+
+    /*=====================================================
+        API PÚBLICA
+    =====================================================*/
 
     return {
 
@@ -192,355 +802,4 @@ const PairingEngine = (() => {
     };
 
 })();
-
-/*=========================================================
-    pairing.js
-    PARTE 2
-=========================================================*/
-
-/*=========================================
-    BACKTRACKING
-=========================================*/
-
-function backtracking(remaining,current){
-
-    if(remaining.length===0){
-
-        return current;
-
-    }
-
-    const player=remaining[0];
-
-    let bestSolution=null;
-
-    let bestCost=Infinity;
-
-    for(let i=1;i<remaining.length;i++){
-
-        const opponent=remaining[i];
-
-        const pairCost=pairingCost(player,opponent);
-
-        if(pairCost===Infinity)
-            continue;
-
-        const nextRemaining=[
-
-            ...remaining.slice(1,i),
-
-            ...remaining.slice(i+1)
-
-        ];
-
-        const nextCurrent=[
-
-            ...current,
-
-            {
-
-                a:player,
-
-                b:opponent,
-
-                cost:pairCost
-
-            }
-
-        ];
-
-        const solution=
-
-            backtracking(
-
-                nextRemaining,
-
-                nextCurrent
-
-            );
-
-        if(!solution)
-            continue;
-
-        const totalCost=
-
-            solution.reduce(
-
-                (sum,p)=>sum+p.cost,
-
-                0
-
-            );
-
-        if(totalCost<bestCost){
-
-            bestCost=totalCost;
-
-            bestSolution=solution;
-
-            if(bestCost===0)
-                break;
-
-        }
-
-    }
-
-    return bestSolution;
-
-}
-
-/*=========================================
-    ORDENAR POR COSTE
-=========================================*/
-
-function sortPairings(pairings){
-
-    return [...pairings]
-
-        .sort(
-
-            (a,b)=>a.cost-b.cost
-
-        );
-
-}
-
-/*=========================================
-    COSTE TOTAL
-=========================================*/
-
-function totalCost(pairings){
-
-    return pairings.reduce(
-
-        (sum,pair)=>sum+pair.cost,
-
-        0
-
-    );
-
-}
-
-/*=========================================================
-    pairing.js
-    PARTE 3
-    Heurísticas y optimización
-=========================================================*/
-
-/*=========================================
-    ELEGIR JUGADOR MÁS RESTRICTIVO
-=========================================*/
-
-function selectNextPlayer(players){
-
-    let bestIndex = 0;
-
-    let fewestOpponents = Infinity;
-
-    for(let i=0;i<players.length;i++){
-
-        let validOpponents = 0;
-
-        for(let j=0;j<players.length;j++){
-
-            if(i===j)
-                continue;
-
-            if(
-
-                pairingCost(
-
-                    players[i],
-
-                    players[j]
-
-                )!==Infinity
-
-            ){
-
-                validOpponents++;
-
-            }
-
-        }
-
-        if(validOpponents<fewestOpponents){
-
-            fewestOpponents = validOpponents;
-
-            bestIndex = i;
-
-        }
-
-    }
-
-    return bestIndex;
-
-}
-
-/*=========================================
-    ORDENAR RIVALES
-=========================================*/
-
-function orderedOpponents(players,index){
-
-    const result=[];
-
-    const player=players[index];
-
-    for(let i=0;i<players.length;i++){
-
-        if(i===index)
-            continue;
-
-        const cost=
-
-            pairingCost(
-
-                player,
-
-                players[i]
-
-            );
-
-        if(cost===Infinity)
-            continue;
-
-        result.push({
-
-            index:i,
-
-            player:players[i],
-
-            cost
-
-        });
-
-    }
-
-    result.sort(
-
-        (a,b)=>a.cost-b.cost
-
-    );
-
-    return result;
-
-}
-
-/*=========================================
-    BACKTRACKING OPTIMIZADO
-=========================================*/
-
-function backtracking(remaining,current){
-
-    if(remaining.length===0){
-
-        return current;
-
-    }
-
-    const index=
-
-        selectNextPlayer(
-
-            remaining
-
-        );
-
-    const player=
-
-        remaining[index];
-
-    const candidates=
-
-        orderedOpponents(
-
-            remaining,
-
-            index
-
-        );
-
-    let bestSolution=null;
-
-    let bestCost=Infinity;
-
-    for(const candidate of candidates){
-
-        const opponent=
-
-            candidate.player;
-
-        const cost=
-
-            candidate.cost;
-
-        const next=
-
-            remaining.filter(
-
-                (_,i)=>
-
-                    i!==index &&
-                    i!==candidate.index
-
-            );
-
-        const partial=[
-
-            ...current,
-
-            {
-
-                a:player,
-
-                b:opponent,
-
-                cost
-
-            }
-
-        ];
-
-        const solution=
-
-            backtracking(
-
-                next,
-
-                partial
-
-            );
-
-        if(!solution)
-            continue;
-
-        const solutionCost=
-
-            totalCost(
-
-                solution
-
-            );
-
-        if(solutionCost<bestCost){
-
-            bestCost=
-
-                solutionCost;
-
-            bestSolution=
-
-                solution;
-
-            if(bestCost===0)
-                break;
-
-        }
-
-    }
-
-    return bestSolution;
-
-}
+```
