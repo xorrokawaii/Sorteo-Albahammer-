@@ -1,0 +1,1196 @@
+/*=========================================================
+    style.css
+    PARTE 1
+    Base, layout y paneles
+=========================================================*/
+
+/*=========================
+    VARIABLES
+=========================*/
+
+:root{
+
+    --bg1:#04132b;
+    --bg2:#071d42;
+    --bg3:#0b2d63;
+
+    --gold:#f3c94b;
+    --goldDark:#c89d18;
+
+    --silver:#dfe6ef;
+
+    --card:#ffffff10;
+    --border:#ffffff25;
+
+    --shadow:0 12px 30px rgba(0,0,0,.45);
+
+    --radius:18px;
+
+}
+
+/*=========================
+    RESET
+=========================*/
+
+*{
+
+    margin:0;
+    padding:0;
+
+    box-sizing:border-box;
+
+}
+
+html{
+
+    scroll-behavior:smooth;
+
+}
+
+body{
+
+    font-family:
+        "Segoe UI",
+        Arial,
+        sans-serif;
+
+    color:white;
+
+    min-height:100vh;
+
+    overflow-x:hidden;
+
+    background:
+
+        radial-gradient(circle at top,
+            #163f83 0%,
+            var(--bg2) 35%,
+            var(--bg1) 100%);
+
+}
+
+/*=========================
+    FONDO
+=========================*/
+
+#backgroundGlow{
+
+    position:fixed;
+
+    inset:0;
+
+    pointer-events:none;
+
+    background:
+
+        radial-gradient(circle,
+            rgba(255,215,0,.08),
+            transparent 60%);
+
+    animation:pulseBackground 8s ease-in-out infinite;
+
+    z-index:-2;
+
+}
+
+@keyframes pulseBackground{
+
+    0%,100%{
+
+        transform:scale(1);
+
+        opacity:.35;
+
+    }
+
+    50%{
+
+        transform:scale(1.15);
+
+        opacity:.7;
+
+    }
+
+}
+
+/*=========================
+    CABECERA
+=========================*/
+
+#topBar{
+
+    padding:30px;
+
+    text-align:center;
+
+}
+
+#logo{
+
+    width:120px;
+
+    display:block;
+
+    margin:auto;
+
+    margin-bottom:20px;
+
+    filter:
+
+        drop-shadow(0 0 18px rgba(255,215,0,.35));
+
+}
+
+#topBar h1{
+
+    font-size:42px;
+
+    letter-spacing:2px;
+
+    color:var(--gold);
+
+    text-shadow:
+
+        0 0 20px rgba(255,215,0,.4);
+
+}
+
+/*=========================
+    CONTENEDOR PRINCIPAL
+=========================*/
+
+#mainContainer{
+
+    width:min(1600px,95%);
+
+    margin:auto;
+
+    display:grid;
+
+    grid-template-columns:
+
+        320px
+
+        1fr;
+
+    gap:40px;
+
+    align-items:start;
+
+}
+
+/*=========================
+    HISTORIAL
+=========================*/
+
+#historyPanel{
+
+    background:var(--card);
+
+    border:1px solid var(--border);
+
+    border-radius:var(--radius);
+
+    backdrop-filter:blur(14px);
+
+    box-shadow:var(--shadow);
+
+    padding:25px;
+
+    min-height:720px;
+
+}
+
+#historyPanel h2{
+
+    text-align:center;
+
+    color:var(--gold);
+
+    margin-bottom:20px;
+
+    font-size:26px;
+
+}
+
+#historyList{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:14px;
+
+    overflow-y:auto;
+
+    max-height:640px;
+
+    padding-right:6px;
+
+}
+
+/*=========================
+    TARJETAS
+=========================*/
+
+.historyCard{
+
+    background:#ffffff08;
+
+    border:1px solid #ffffff18;
+
+    border-radius:14px;
+
+    padding:14px;
+
+    transition:.35s;
+
+}
+
+.historyCard:hover{
+
+    transform:translateY(-4px);
+
+    background:#ffffff12;
+
+}
+
+.historyCard .vs{
+
+    margin:10px 0;
+
+    text-align:center;
+
+    font-weight:bold;
+
+    color:var(--gold);
+
+}
+
+/*=========================
+    ZONA CENTRAL
+=========================*/
+
+#drawArea{
+
+    display:flex;
+
+    flex-direction:column;
+
+    align-items:center;
+
+}
+
+/*=========================
+    URNA
+=========================*/
+
+#urnArea{
+
+    position:relative;
+
+    width:520px;
+
+    height:520px;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+}
+
+#urn{
+
+    width:100%;
+
+    user-select:none;
+
+    pointer-events:none;
+
+    filter:
+
+        drop-shadow(0 25px 35px rgba(0,0,0,.45));
+
+}
+
+#ballContainer{
+
+    position:absolute;
+
+    inset:0;
+
+}
+
+/*=========================
+    RESPONSIVE
+=========================*/
+
+@media(max-width:1100px){
+
+    #mainContainer{
+
+        grid-template-columns:1fr;
+
+    }
+
+    #historyPanel{
+
+        min-height:auto;
+
+    }
+
+}
+
+@media(max-width:700px){
+
+    #urnArea{
+
+        width:95vw;
+
+        height:95vw;
+
+        max-width:420px;
+
+        max-height:420px;
+
+    }
+
+    #topBar h1{
+
+        font-size:30px;
+
+    }
+
+  /*=========================================================
+    style.css
+    PARTE 2
+    Bolas, papel, VS y controles
+=========================================================*/
+
+/*=========================
+    BOLAS DENTRO DE LA URNA
+=========================*/
+
+.ball{
+
+    position:absolute;
+
+    width:34px;
+    height:34px;
+
+    border-radius:50%;
+
+    background:
+        radial-gradient(circle at 30% 30%,
+            #fff7c7 0%,
+            #ffe27a 25%,
+            #e1b328 65%,
+            #b17d08 100%);
+
+    box-shadow:
+        0 2px 8px rgba(0,0,0,.45),
+        inset -4px -6px 8px rgba(0,0,0,.25),
+        inset 3px 3px 6px rgba(255,255,255,.35);
+
+    transition:
+        transform .4s,
+        opacity .4s;
+
+}
+
+.ball::after{
+
+    content:"";
+
+    position:absolute;
+
+    width:10px;
+    height:10px;
+
+    border-radius:50%;
+
+    background:rgba(255,255,255,.8);
+
+    top:6px;
+    left:8px;
+
+    filter:blur(1px);
+
+}
+
+.ball.hidden{
+
+    opacity:0;
+
+    transform:scale(.2);
+
+}
+
+/*=========================
+    BOLA EXTRAÍDA
+=========================*/
+
+#drawBall{
+
+    position:relative;
+
+    width:180px;
+    height:180px;
+
+    margin-top:-40px;
+
+    opacity:0;
+
+    pointer-events:none;
+
+    transform:translateY(-180px) scale(.3);
+
+    z-index:30;
+
+}
+
+#drawBall.visible{
+
+    opacity:1;
+
+    transform:translateY(0) scale(1);
+
+    transition:
+        transform 1.4s ease,
+        opacity .6s;
+
+}
+
+.ballHalf{
+
+    position:absolute;
+
+    width:180px;
+    height:90px;
+
+    left:0;
+
+    background:
+        radial-gradient(circle at 30% 30%,
+            #fff6bf,
+            #f1c23c,
+            #bc8b0d);
+
+    box-shadow:
+        inset 0 -5px 10px rgba(0,0,0,.25);
+
+}
+
+.ballHalf.top{
+
+    border-radius:180px 180px 0 0;
+
+    top:0;
+
+}
+
+.ballHalf.bottom{
+
+    border-radius:0 0 180px 180px;
+
+    bottom:0;
+
+}
+
+#drawBall.open .top{
+
+    transform:
+        translateY(-50px)
+        rotate(-22deg);
+
+    transition:.8s;
+
+}
+
+#drawBall.open .bottom{
+
+    transform:
+        translateY(50px)
+        rotate(22deg);
+
+    transition:.8s;
+
+}
+
+/*=========================
+    PAPEL
+=========================*/
+
+#paper{
+
+    position:absolute;
+
+    width:150px;
+
+    left:50%;
+    top:50%;
+
+    transform:
+        translate(-50%,-50%)
+        scale(.2);
+
+    opacity:0;
+
+    background:white;
+
+    color:#222;
+
+    border-radius:10px;
+
+    padding:18px;
+
+    text-align:center;
+
+    box-shadow:
+        0 12px 24px rgba(0,0,0,.4);
+
+}
+
+#drawBall.open #paper{
+
+    transform:
+        translate(-50%,-50%)
+        scale(1);
+
+    opacity:1;
+
+    transition:
+        .7s;
+
+    transition-delay:.3s;
+
+}
+
+#paperName{
+
+    color:#0b2d63;
+
+    font-size:24px;
+
+    margin-bottom:10px;
+
+}
+
+#paperTeam{
+
+    color:#444;
+
+    margin-bottom:6px;
+
+}
+
+#paperArmy{
+
+    color:#777;
+
+    font-size:15px;
+
+}
+
+/*=========================
+    VS
+=========================*/
+
+#versusSection{
+
+    margin-top:45px;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    gap:40px;
+
+    opacity:0;
+
+    transform:translateY(40px);
+
+    transition:.6s;
+
+}
+
+#versusSection.show{
+
+    opacity:1;
+
+    transform:translateY(0);
+
+}
+
+#vs{
+
+    font-size:56px;
+
+    font-weight:bold;
+
+    color:var(--gold);
+
+    text-shadow:
+        0 0 18px rgba(255,215,0,.45);
+
+}
+
+/*=========================
+    TARJETAS
+=========================*/
+
+.playerCard{
+
+    width:260px;
+
+    background:var(--card);
+
+    border:1px solid var(--border);
+
+    border-radius:18px;
+
+    backdrop-filter:blur(12px);
+
+    padding:24px;
+
+    text-align:center;
+
+    box-shadow:var(--shadow);
+
+}
+
+.playerName{
+
+    font-size:26px;
+
+    color:var(--gold);
+
+    margin-bottom:10px;
+
+}
+
+.playerTeam{
+
+    font-size:18px;
+
+    margin-bottom:6px;
+
+}
+
+.playerArmy{
+
+    color:#d9d9d9;
+
+}
+
+/*=========================
+    CONTROLES
+=========================*/
+
+#controls{
+
+    margin-top:50px;
+
+    display:flex;
+
+    gap:18px;
+
+    flex-wrap:wrap;
+
+    justify-content:center;
+
+}
+
+#controls button{
+
+    border:none;
+
+    border-radius:40px;
+
+    padding:
+
+        15px
+        28px;
+
+    font-size:17px;
+
+    font-weight:bold;
+
+    cursor:pointer;
+
+    transition:.25s;
+
+    color:#09214c;
+
+    background:
+
+        linear-gradient(
+
+            to bottom,
+
+            #ffe58f,
+
+            #efbf31
+
+        );
+
+    box-shadow:
+
+        0 8px 20px rgba(0,0,0,.35);
+
+}
+
+#controls button:hover{
+
+    transform:
+
+        translateY(-3px);
+
+}
+
+#controls button:active{
+
+    transform:
+
+        scale(.96);
+
+}
+
+#controls button:disabled{
+
+    opacity:.4;
+
+    cursor:not-allowed;
+
+    transform:none;
+
+}
+
+  /*=========================================================
+    style.css
+    PARTE 3
+    Animaciones y efectos especiales
+=========================================================*/
+
+/*=========================
+    BRILLO DE LA URNA
+=========================*/
+
+#urnArea::before{
+
+    content:"";
+
+    position:absolute;
+
+    width:360px;
+    height:360px;
+
+    border-radius:50%;
+
+    background:
+
+        radial-gradient(circle,
+            rgba(255,215,0,.20),
+            rgba(255,215,0,.05),
+            transparent 75%);
+
+    animation:urnGlow 4s ease-in-out infinite;
+
+    pointer-events:none;
+
+    z-index:-1;
+
+}
+
+@keyframes urnGlow{
+
+    0%,100%{
+
+        transform:scale(.95);
+
+        opacity:.35;
+
+    }
+
+    50%{
+
+        transform:scale(1.12);
+
+        opacity:.8;
+
+    }
+
+}
+
+/*=========================
+    MOVIMIENTO DE BOLAS
+=========================*/
+
+.ball{
+
+    animation:
+
+        floatBall 3.5s ease-in-out infinite;
+
+}
+
+.ball:nth-child(2n){
+
+    animation-duration:4.2s;
+
+}
+
+.ball:nth-child(3n){
+
+    animation-duration:5s;
+
+}
+
+.ball:nth-child(5n){
+
+    animation-duration:3.1s;
+
+}
+
+@keyframes floatBall{
+
+    0%{
+
+        transform:
+            translate(0,0);
+
+    }
+
+    25%{
+
+        transform:
+            translate(4px,-8px);
+
+    }
+
+    50%{
+
+        transform:
+            translate(-5px,6px);
+
+    }
+
+    75%{
+
+        transform:
+            translate(6px,-3px);
+
+    }
+
+    100%{
+
+        transform:
+            translate(0,0);
+
+    }
+
+}
+
+/*=========================
+    SALIDA DE LA BOLA
+=========================*/
+
+#drawBall.extract{
+
+    animation:extractBall 2.2s ease forwards;
+
+}
+
+@keyframes extractBall{
+
+    0%{
+
+        opacity:0;
+
+        transform:
+            translateY(-240px)
+            scale(.35);
+
+    }
+
+    20%{
+
+        opacity:1;
+
+    }
+
+    55%{
+
+        transform:
+            translateY(-30px)
+            scale(.9);
+
+    }
+
+    80%{
+
+        transform:
+            translateY(40px)
+            rotate(360deg)
+            scale(1);
+
+    }
+
+    100%{
+
+        transform:
+            translateY(70px)
+            scale(1);
+
+    }
+
+}
+
+/*=========================
+    DESTELLO
+=========================*/
+
+#drawBall::after{
+
+    content:"";
+
+    position:absolute;
+
+    inset:-40px;
+
+    border-radius:50%;
+
+    opacity:0;
+
+    background:
+
+        radial-gradient(circle,
+            rgba(255,255,255,.9),
+            rgba(255,215,0,.5),
+            transparent);
+
+}
+
+#drawBall.open::after{
+
+    animation:flash .8s;
+
+}
+
+@keyframes flash{
+
+    0%{
+
+        opacity:1;
+
+        transform:scale(.3);
+
+    }
+
+    100%{
+
+        opacity:0;
+
+        transform:scale(2);
+
+    }
+
+}
+
+/*=========================
+    TARJETAS
+=========================*/
+
+.playerCard{
+
+    opacity:0;
+
+    transform:
+
+        translateY(30px);
+
+}
+
+.playerCard.show{
+
+    animation:
+
+        revealCard .8s forwards;
+
+}
+
+@keyframes revealCard{
+
+    from{
+
+        opacity:0;
+
+        transform:
+
+            translateY(30px);
+
+    }
+
+    to{
+
+        opacity:1;
+
+        transform:
+
+            translateY(0);
+
+    }
+
+}
+
+/*=========================
+    HISTORIAL
+=========================*/
+
+.historyCard{
+
+    opacity:0;
+
+    transform:
+
+        translateX(-40px);
+
+}
+
+.historyCard.show{
+
+    animation:
+
+        historyAppear .7s forwards;
+
+}
+
+@keyframes historyAppear{
+
+    to{
+
+        opacity:1;
+
+        transform:
+
+            translateX(0);
+
+    }
+
+}
+
+/*=========================
+    CONFETI
+=========================*/
+
+.confetti{
+
+    position:fixed;
+
+    width:10px;
+
+    height:16px;
+
+    top:-20px;
+
+    pointer-events:none;
+
+    animation:
+
+        confettiFall 4s linear forwards;
+
+}
+
+@keyframes confettiFall{
+
+    0%{
+
+        transform:
+
+            translateY(-20px)
+            rotate(0deg);
+
+        opacity:1;
+
+    }
+
+    100%{
+
+        transform:
+
+            translateY(110vh)
+            rotate(900deg);
+
+        opacity:0;
+
+    }
+
+}
+
+/*=========================
+    PANTALLA FINAL
+=========================*/
+
+#finalScreen{
+
+    opacity:0;
+
+    visibility:hidden;
+
+    transform:
+
+        scale(.95);
+
+    transition:
+
+        .6s;
+
+}
+
+#finalScreen.show{
+
+    opacity:1;
+
+    visibility:visible;
+
+    transform:
+
+        scale(1);
+
+}
+
+/*=========================
+    SCROLL
+=========================*/
+
+::-webkit-scrollbar{
+
+    width:10px;
+
+}
+
+::-webkit-scrollbar-track{
+
+    background:#09214c;
+
+}
+
+::-webkit-scrollbar-thumb{
+
+    background:var(--gold);
+
+    border-radius:10px;
+
+}
+
+::-webkit-scrollbar-thumb:hover{
+
+    background:#ffe07d;
+
+}
+
+}
