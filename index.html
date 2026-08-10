@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Sorteo Primera Ronda</title>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<div id="backgroundGlow"></div>
+
+<header id="topBar">
+
+    <img
+    src="assets/logo.svg"
+    id="logo"
+    alt="Logo">
+
+    <h1>
+
+        Sorteo Primera Ronda
+
+    </h1>
+
+</header>
+
+<main id="mainContainer">
+
+    <!-- PANEL IZQUIERDO -->
+
+    <aside id="historyPanel">
+
+        <h2>
+
+            Enfrentamientos
+
+        </h2>
+
+        <div id="historyList">
+
+        </div>
+
+    </aside>
+
+    <!-- ZONA CENTRAL -->
+
+    <section id="drawArea">
+
+        <!-- URNA -->
+
+        <div id="urnArea">
+
+            <img
+
+            src="assets/urn.png"
+
+            id="urn"
+
+            alt="Urna">
+
+            <div id="ballContainer">
+
+            </div>
+
+        </div>
+
+        <!-- BOLA EXTRAÍDA -->
+
+        <div id="drawBall">
+
+            <div class="ballHalf top"></div>
+
+            <div class="ballHalf bottom"></div>
+
+            <div id="paper">
+
+                <h2 id="paperName"></h2>
+
+                <p id="paperTeam"></p>
+
+                <p id="paperArmy"></p>
+
+            </div>
+
+        </div>
+
+        <!-- VS -->
+
+        <section id="versusSection">
+
+            <article
+            class="playerCard"
+            id="playerLeft">
+
+                <h2 class="playerName"></h2>
+
+                <p class="playerTeam"></p>
+
+                <p class="playerArmy"></p>
+
+            </article>
+
+            <div id="vs">
+
+                VS
+
+            </div>
+
+            <article
+            class="playerCard"
+            id="playerRight">
+
+                <h2 class="playerName"></h2>
+
+                <p class="playerTeam"></p>
+
+                <p class="playerArmy"></p>
+
+            </article>
+
+        </section>
+
+        <!-- CONTROLES -->
+
+        <div id="controls">
+
+            <button id="startButton">
+
+                Comenzar sorteo
+
+            </button>
+
+            <button
+            id="nextButton"
+            disabled>
+
+                Extraer bola
+
+            </button>
+
+            <button id="restartButton">
+
+                Nuevo sorteo
+
+            </button>
+
+        </div>
+
+    </section>
+
+</main>
+
+<!-- RESUMEN FINAL -->
+
+<section id="finalScreen">
+
+    <h2>
+
+        Emparejamientos Finales
+
+    </h2>
+
+    <div id="finalList">
+
+    </div>
+
+</section>
+
+<!-- SONIDOS -->
+
+<audio
+id="introAudio"
+src="sounds/intro.mp3"></audio>
+
+<audio
+id="ballAudio"
+src="sounds/ball.mp3"></audio>
+
+<audio
+id="openAudio"
+src="sounds/open.mp3"></audio>
+
+<audio
+id="applauseAudio"
+src="sounds/applause.mp3"></audio>
+
+<script src="data.js"></script>
+<script src="pairing.js"></script>
+<script src="script.js"></script>
+
+</body>
+
+</html>
